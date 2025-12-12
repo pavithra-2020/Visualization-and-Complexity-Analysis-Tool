@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bubble Sort Visualizer</title>
+  <style>
+    :root{
+      --bg-1: #0f1724; /* deep navy */
+      --bg-2: #0b1220; /* darker */
+      --card: rgba(255,255,255,0.04);
+      --accent: #6ee7b7;
+      --accent-2: #60a5fa;
+      --muted: rgba(255,255,255,0.6);
+      --glass: rgba(255,255,255,0.03);
+      --glass-2: rgba(255,255,255,0.02);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;margin:0;}
+    body{
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(96,165,250,0.08), transparent),
+                  radial-gradient(900px 500px at 90% 90%, rgba(110,231,183,0.04), transparent),
+                  linear-gradient(180deg,var(--bg-1),var(--bg-2));
+      color: #e6eef8;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      display:flex;align-items:center;justify-content:center;padding:40px;
+    }
+    .container{
+      width:1100px;max-width:96%;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:14px;padding:22px;box-shadow: 0 10px 40px rgba(2,6,23,0.6);display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start;
+      backdrop-filter: blur(6px);
+      border:1px solid rgba(255,255,255,0.04);
+    }
+    header.app-header{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+    .logo{
+      width:54px;height:54px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:#04263b;font-weight:700;font-size:18px;box-shadow:0 6px 18px rgba(96,165,250,0.12);
+    }
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    /* Visual area */
+    .visual-card{background:var(--card);padding:18px;border-radius:10px;border:1px solid var(--glass);min-height:420px;display:flex;flex-direction:column}
+    .canvas{flex:1;display:flex;align-items:end;gap:6px;padding:12px;position:relative}
+    .bar{flex:1;margin:0 3px;border-radius:6px 6px 4px 4px;background:linear-gradient(180deg,var(--accent),var(--accent-2));display:flex;align-items:end;justify-content:center;color:#04263b;font-weight:600;font-size:11px;transition:transform 200ms ease,height 220ms ease,background 180ms ease;}
+    .bar.small{font-size:10px}
+    .bar.highlight{background:linear-gradient(180deg,#fbbf24,#fb923c);color:#091422;transform:translateY(-6px);box-shadow:0 10px 30px rgba(251,146,60,0.12)}
+    .bar.swap{background:linear-gradient(180deg,#ef4444,#f97316);color:white;transform:translateY(-6px)}
+
+    /* controls */
+    .controls{display:flex;gap:10px;align-items:center;margin-top:12px}
+    button.btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;font-weight:600}
+    button.btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#04263b;border:none}
+    button.btn:disabled{opacity:0.4;cursor:not-allowed}
+    .group{display:flex;gap:8px}
+
+    /* sidebar */
+    .sidebar{padding:16px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.018), rgba(255,255,255,0.01));border:1px solid var(--glass-2);min-height:420px}
+    .panel{margin-bottom:14px}
+    .panel h3{margin:0 0 8px 0;font-size:14px}
+    .info{font-size:13px;color:var(--muted);line-height:1.4}
+    .badge{display:inline-block;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.03);font-weight:700}
+
+    .slider-row{display:flex;gap:10px;align-items:center}
+    input[type=range]{width:100%}
+    .small{font-size:12px;color:var(--muted)}
+    footer.attribution{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+
+    @media (max-width:920px){.container{grid-template-columns:1fr;}
+      .sidebar{order:2}
+    }
+  </style>
+</head>
+<body>
+  <div class="container" role="application" aria-label="Bubble Sort Visualizer">
+    <div>
+      <header class="app-header">
+        <div class="logo">BS</div>
+        <div>
+          <h1>Bubble Sort — Algorithm Visualizer</h1>
+          <p class="lead">Step-by-step animation with operation counter, and time/space complexity display.</p>
+        </div>
+      </header>
+
+      <section class="visual-card" aria-live="polite">
+        <div class="canvas" id="canvas" role="img" aria-label="Array visualization"></div>
+
+        <div class="controls" style="justify-content:space-between;align-items:center">
+          <div class="group">
+            <button id="playBtn" class="btn primary">Play</button>
+            <button id="pauseBtn" class="btn" disabled>Pause</button>
+            <button id="stepBtn" class="btn">Step</button>
+            <button id="resetBtn" class="btn">Reset</button>
+          </div>
+
+          <div style="display:flex;gap:12px;align-items:center;min-width:360px">
+            <div style="width:220px">
+              <div class="small">Speed</div>
+              <input id="speed" type="range" min="50" max="1200" value="400" />
+            </div>
+            <div style="width:160px">
+              <div class="small">Array Size</div>
+              <input id="size" type="range" min="5" max="40" value="18" />
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="sidebar" aria-hidden="false">
+      <div class="panel">
+        <h3>Array Controls</h3>
+        <div class="info">
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <button id="randomizeBtn" class="btn">New Random Array</button>
+            <button id="sortedBtn" class="btn">Sorted</button>
+            <button id="reversedBtn" class="btn">Reversed</button>
+          </div>
+          <div class="small">Tip: use <strong>Step</strong> to see a single comparison or <strong>Play</strong> to animate.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Algorithm Information</h3>
+        <div class="info">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="badge">Bubble Sort</span><span class="small">Comparison-based, Stable</span></div>
+          <div><strong>Best case:</strong> O(n) — when already sorted</div>
+          <div><strong>Average case:</strong> O(n²)</div>
+          <div><strong>Worst case:</strong> O(n²)</div>
+          <div><strong>Space Complexity:</strong> O(1)</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Live Metrics</h3>
+        <div class="info" id="metrics">
+          <div>Comparisons: <strong id="comparisons">0</strong></div>
+          <div>Swaps: <strong id="swaps">0</strong></div>
+          <div>Pass: <strong id="pass">0</strong></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Legend</h3>
+        <div class="info">
+          <div><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:3px;margin-right:8px"></span> Comparing</div>
+          <div><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:3px;margin-right:8px"></span> Swapping</div>
+          <div><span style="display:inline-block;width:12px;height:12px;background:linear-gradient(180deg,var(--accent),var(--accent-2));border-radius:3px;margin-right:8px"></span> Normal</div>
+        </div>
+      </div>
+
+      <footer class="attribution">
+        Visualizer • Designed for learning — clean, responsive, and accessible.
+      </footer>
+    </aside>
+  </div>
+
+  <script>
+    // Professional, commented Bubble Sort visualizer.
+    (function(){
+      const canvas = document.getElementById('canvas');
+      const playBtn = document.getElementById('playBtn');
+      const pauseBtn = document.getElementById('pauseBtn');
+      const stepBtn = document.getElementById('stepBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const speedInput = document.getElementById('speed');
+      const sizeInput = document.getElementById('size');
+      const randomizeBtn = document.getElementById('randomizeBtn');
+      const sortedBtn = document.getElementById('sortedBtn');
+      const reversedBtn = document.getElementById('reversedBtn');
+
+      const comparisonsEl = document.getElementById('comparisons');
+      const swapsEl = document.getElementById('swaps');
+      const passEl = document.getElementById('pass');
+
+      let array = [];
+      let bars = [];
+      let size = parseInt(sizeInput.value,10);
+
+      // Animation control
+      let running = false;
+      let generator = null;
+      let speed = parseInt(speedInput.value,10);
+      let timer = null;
+
+      // Metrics
+      let metrics = {comparisons:0, swaps:0, pass:0};
+
+      function createArray(n){
+        const arr = Array.from({length:n}, ()=> Math.floor(Math.random()*90)+10);
+        return arr;
+      }
+
+      function renderArray(arr){
+        canvas.innerHTML = '';
+        bars = [];
+        const max = Math.max(...arr);
+        arr.forEach((val, idx)=>{
+          const bar = document.createElement('div');
+          bar.className = 'bar';
+          bar.style.height = (val / max * 320 + 24) + 'px';
+          bar.title = String(val);
+          bar.dataset.value = val;
+          bar.dataset.index = idx;
+          bar.textContent = val;
+          if (arr.length > 28) bar.classList.add('small');
+          canvas.appendChild(bar);
+          bars.push(bar);
+        });
+      }
+
+      function updateMetrics(){
+        comparisonsEl.textContent = metrics.comparisons;
+        swapsEl.textContent = metrics.swaps;
+        passEl.textContent = metrics.pass;
+      }
+
+      // Generator that yields each comparison and swap step.
+      function* bubbleSortGen(arr){
+        const a = arr.slice();
+        const n = a.length;
+        let swapped;
+        for(let i=0;i<n;i++){
+          swapped = false;
+          metrics.pass = i+1;
+          for(let j=0;j<n-i-1;j++){
+            metrics.comparisons++;
+            yield {type:'compare',i:j,j:j+1,arr:a.slice(),metrics:{...metrics}};
+            if (a[j] > a[j+1]){
+              metrics.swaps++;
+              const tmp = a[j]; a[j] = a[j+1]; a[j+1] = tmp;
+              swapped = true;
+              yield {type:'swap',i:j,j:j+1,arr:a.slice(),metrics:{...metrics}};
+            }
+          }
+          if(!swapped){
+            // Already sorted; still report completion pass
+            yield {type:'done',i:null,j:null,arr:a.slice(),metrics:{...metrics}};
+            break;
+          }
+        }
+        return {type:'finished',arr:a.slice(),metrics:{...metrics}};
+      }
+
+      // Apply a single step from generator to UI
+      function applyStep(step){
+        if(!step) return;
+        // Reset highlights
+        bars.forEach(b=>{b.classList.remove('highlight','swap');});
+        updateMetrics();
+        if(step.type === 'compare'){
+          const a = step.arr;
+          // update heights to reflect current order
+          a.forEach((val,idx)=>{
+            bars[idx].style.height = (val / Math.max(...a) * 320 + 24) + 'px';
+            bars[idx].dataset.value = val;
+            bars[idx].textContent = val;
+          });
+          const b1 = bars[step.i];
+          const b2 = bars[step.j];
+          if(b1) b1.classList.add('highlight');
+          if(b2) b2.classList.add('highlight');
+        } else if(step.type === 'swap'){
+          const a = step.arr;
+          a.forEach((val,idx)=>{
+            bars[idx].style.height = (val / Math.max(...a) * 320 + 24) + 'px';
+            bars[idx].dataset.value = val;
+            bars[idx].textContent = val;
+          });
+          const b1 = bars[step.i];
+          const b2 = bars[step.j];
+          if(b1) b1.classList.add('swap');
+          if(b2) b2.classList.add('swap');
+        } else if(step.type === 'done' || step.type === 'finished'){
+          // mark sorted portion subtly
+          bars.forEach(b=>{ b.classList.remove('highlight','swap');});
+        }
+      }
+
+      function startAutoPlay(){
+        if(running) return;
+        running = true;
+        playBtn.disabled = true; pauseBtn.disabled = false; stepBtn.disabled = true; sizeInput.disabled = true;
+        const stepLoop = () => {
+          const next = generator.next();
+          if(next.done){
+            applyStep(next.value);
+            stopAutoPlay();
+            return;
+          }
+          applyStep(next.value);
+          timer = setTimeout(stepLoop, Math.max(40, 1200 - speed));
+        };
+        stepLoop();
+      }
+
+      function stopAutoPlay(){
+        running = false;
+        playBtn.disabled = false; pauseBtn.disabled = true; stepBtn.disabled = false; sizeInput.disabled = false;
+        if(timer) clearTimeout(timer);
+      }
+
+      function reset(){
+        if(timer) clearTimeout(timer);
+        running = false; generator = null; timer = null;
+        metrics = {comparisons:0,swaps:0,pass:0};
+        updateMetrics();
+        array = createArray(size);
+        renderArray(array);
+        playBtn.disabled = false; pauseBtn.disabled = true; stepBtn.disabled = false; sizeInput.disabled = false;
+      }
+
+      function singleStep(){
+        if(!generator) generator = bubbleSortGen(array);
+        const next = generator.next();
+        if(next.done){
+          applyStep(next.value);
+          stopAutoPlay();
+          return;
+        }
+        applyStep(next.value);
+      }
+
+      // UI events
+      playBtn.addEventListener('click', ()=>{
+        speed = parseInt(speedInput.value,10);
+        if(!generator) generator = bubbleSortGen(array);
+        startAutoPlay();
+      });
+      pauseBtn.addEventListener('click', ()=>{
+        stopAutoPlay();
+      });
+      stepBtn.addEventListener('click', ()=>{
+        singleStep();
+      });
+      resetBtn.addEventListener('click', ()=>{
+        reset();
+      });
+
+      speedInput.addEventListener('input', ()=>{ speed = parseInt(speedInput.value,10); });
+      sizeInput.addEventListener('input', ()=>{ size = parseInt(sizeInput.value,10); reset(); });
+
+      randomizeBtn.addEventListener('click', ()=>{ array = createArray(size); reset(); });
+      sortedBtn.addEventListener('click', ()=>{ array = Array.from({length:size}, (_,i)=> 10 + Math.round((i/(size-1))*90)); reset(); });
+      reversedBtn.addEventListener('click', ()=>{ array = Array.from({length:size}, (_,i)=> 10 + Math.round(((size-1-i)/(size-1))*90)); reset(); });
+
+      // initialize
+      array = createArray(size);
+      renderArray(array);
+      updateMetrics();
+
+      // accessibility: keyboard shortcuts
+      window.addEventListener('keydown', (e)=>{
+        if(e.code === 'Space'){
+          e.preventDefault(); if(running) stopAutoPlay(); else playBtn.click();
+        }
+        if(e.key === 'ArrowRight') stepBtn.click();
+      });
+
+    })();
+  </script>
+</body>
+</html>
